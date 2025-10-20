@@ -8,6 +8,9 @@ import pandas as pd
 import yfinance as yf
 from flask import Flask, jsonify, render_template
 
+from init_tmp import ensure_tmp_watchlist
+ensure_tmp_watchlist()
+
 BASE_DIR = Path(__file__).parent
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
