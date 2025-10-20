@@ -12,14 +12,15 @@
     {
       "src": "templates/**/*",
       "use": "@vercel/static"
+    },
+    {
+      "src": "watchlist.json",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/app.py" },
     { "src": "/static/(.*)", "dest": "/static/$1" },
     { "src": "/(.*)", "dest": "/app.py" }
-  ],
-  "env": {
-    "PYTHONUNBUFFERED": "1"
-  }
+  ]
 }
