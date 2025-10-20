@@ -1,3 +1,4 @@
+import os
 import json
 from pathlib import Path
 from datetime import datetime, timezone
@@ -23,17 +24,30 @@ CAT_ORDER = ["STOCK", "INDEX", "CRYPTO", "COMMODITY"]
 
 def load_watchlist() -> list[dict]:
     """
-    Lê watchlist.json no formato:
-    {
-      "stocks": ["EDPR.LS", "VKTX", ...],
-      "crypto": ["bitcoin", "solana", ...],
-      "commodities": [],
-      "indices": ["^PSI20", "^NDX"]
-    }
-    Devolve lista normalizada: [{category, ticker, name}]
+    Lê o watchlist.json:
+      🖥️ Localmente → ./watchlist.json
+      ☁️ Vercel → /tmp/watchlist.json
+    e devolve lista normalizada: [{category, ticker, name}]
     """
-    wl_path = BASE_DIR / "watchlist.json"
-    data = json.loads(wl_path.read_text(encoding="utf-8"))
+    tmp_path = Path("/tmp/watchlist.json")
+    local_path = BASE_DIR / "watchlist.json"
+
+    if os.getenv("VERCEL") or tmp_path.exists():
+        wl_path = tmp_path
+        print("📦 Modo Vercel: usando /tmp/watchlist.json")
+    else:
+        wl_path = local_path
+        print("💻 Modo local: usando watchlist.json na raiz")
+
+    if not wl_path.exists():
+        print(f"⚠️ Ficheiro {wl_path} não encontrado.")
+        return []
+
+    try:
+        data = json.loads(wl_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"❌ Erro ao ler {wl_path}: {e}")
+        return []
 
     items: list[dict] = []
 
@@ -49,23 +63,22 @@ def load_watchlist() -> list[dict]:
         if t:
             items.append({"category": "INDEX", "ticker": t, "name": t})
 
-    # Commodities (se vierem já em formato Yahoo, usa direto)
+    # Commodities
     for sym in data.get("commodities", []):
         t = str(sym).strip()
         if t:
             items.append({"category": "COMMODITY", "ticker": t.upper(), "name": t.upper()})
 
-    # Crypto (normaliza nomes → Yahoo)
+    # Crypto
     for c in data.get("crypto", []):
         k = str(c).strip().lower()
         t = CRYPTO_MAP.get(k, k.upper())
-        # se não mapear, tenta "<SYMBOL>-USD" como fallback
         if "-USD" not in t and t.isalpha():
             t = f"{t.upper()}-USD"
         name = {"BTC-USD":"Bitcoin", "ETH-USD":"Ethereum", "SOL-USD":"Solana"}.get(t, k.capitalize())
         items.append({"category": "CRYPTO", "ticker": t, "name": name})
 
-    # remover duplicados preservando ordem (ticker+cat)
+    # remover duplicados preservando ordem
     seen = set()
     unique = []
     for it in items:
@@ -74,7 +87,7 @@ def load_watchlist() -> list[dict]:
             seen.add(key)
             unique.append(it)
 
-    # ordenar por categoria “Bloomberg-like”
+    # ordenar por categoria estilo Bloomberg
     cat_rank = {c: i for i, c in enumerate(CAT_ORDER)}
     unique.sort(key=lambda x: (cat_rank.get(x["category"], 99), x["ticker"]))
     return unique
@@ -110,10 +123,7 @@ def _extract_prev_close(df, ticker):
     return None
 
 def fetch_quotes(items: list[dict]) -> list[dict]:
-    """
-    Faz download em lote (1m e 1d) para TODOS os tickers.
-    Calcula preço atual, variação e variação %.
-    """
+    """Faz download em lote (1m e 1d) para TODOS os tickers."""
     syms = [it["ticker"] for it in items]
 
     try:
@@ -141,7 +151,6 @@ def fetch_quotes(items: list[dict]) -> list[dict]:
         last = _extract_last(df_1m, t)
         prev = _extract_prev_close(df_1d, t)
 
-        # fallback: usar último 1d como "last" se 1m não existe
         if last is None and df_1d is not None and not df_1d.empty:
             if isinstance(df_1d.columns, pd.MultiIndex):
                 col = ("Close", t)
@@ -161,8 +170,6 @@ def fetch_quotes(items: list[dict]) -> list[dict]:
 
         chg = last - prev
         chg_pct = (chg / prev) * 100.0
-
-        # precisão: índices/cripto tendem a precisar de + casas decimais
         prec = 4 if (t.endswith("-USD") or t.startswith("^") or abs(last) < 1) else 2
 
         result.append({
