@@ -1,0 +1,20 @@
+{
+  "stocks": [
+    "EDPR.LS",
+    "VKTX",
+    "ABBV",
+    "EGL.LS",
+    "KZR",
+    "SMC"
+  ],
+  "crypto": [
+    "bitcoin",
+    "solana",
+    "ethereum"
+  ],
+  "commodities": [],
+  "indices": [
+    "^PSI20",
+    "^NDX"
+  ]
+}

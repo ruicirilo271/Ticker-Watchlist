@@ -1,0 +1,105 @@
+:root{
+  --bg: #0a0a0a;
+  --bar: #000000;
+  --text: #e6e6e6;
+  --muted:#9ca3af;
+
+  --cat-stock:#2196f3;     /* azul */
+  --cat-crypto:#ff9800;    /* laranja */
+  --cat-index:#2ecc71;     /* verde */
+  --cat-commodity:#f6c90e; /* dourado */
+
+  --up:#00c853;
+  --down:#ff1744;
+
+  --height: 58px;          /* altura da faixa */
+  --speed: 35s;            /* duração do scroll; é ajustada via JS */
+}
+
+/* layout base */
+*{ box-sizing:border-box; }
+html,body{ margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif; }
+
+/* ticker fullscreen fixo no topo */
+.ticker-wrap{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--height);
+  background: var(--bar);
+  border-bottom: 1px solid #1f2937;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+/* duas pistas iguais para loop infinito */
+.ticker{
+  display: flex;
+  width: 200%;
+}
+.ticker-track{
+  display: inline-flex;
+  align-items: center;
+  gap: 28px;
+  padding: 0 16px;
+  height: var(--height);
+  white-space: nowrap;
+  animation: scroll-left var(--speed) linear infinite;
+}
+.ticker-track.second{
+  animation-delay: calc(var(--speed)/2);
+}
+
+/* animação: direita -> esquerda */
+@keyframes scroll-left{
+  0%{ transform: translateX(0); }
+  100%{ transform: translateX(-50%); } /* 2 pistas => -50% fecha o ciclo */
+}
+
+/* pausa ao hover */
+.ticker-wrap:hover .ticker-track{
+  animation-play-state: paused;
+  cursor: pointer;
+}
+
+/* item do ticker */
+.item{
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  line-height: 1;
+  font-size: 16px;
+}
+.cat{
+  font-weight: 800;
+  letter-spacing: .3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #222;
+}
+.cat-stock{ color: #111; background: var(--cat-stock); }
+.cat-crypto{ color: #111; background: var(--cat-crypto); }
+.cat-index{ color: #111; background: var(--cat-index); }
+.cat-commodity{ color: #111; background: var(--cat-commodity); }
+
+.sym{
+  color:#f3f4f6; font-weight:800; min-width:70px; text-align:right;
+}
+.name{
+  color:var(--muted); max-width:150px; overflow:hidden; text-overflow:ellipsis;
+}
+.price{
+  color:#ffffff; font-weight:700; min-width:85px; text-align:right;
+}
+.delta{
+  min-width:110px; text-align:right; font-weight:800;
+}
+.delta.up{ color: var(--up); }
+.delta.down{ color: var(--down); }
+.delta.flat{ color:#e5e7eb; }
+
+/* conteúdo por baixo do ticker (apenas para não ficar escondido) */
+.under-ticker{
+  padding: 20px 16px;
+  margin-top: calc(var(--height) + 12px);
+  color: var(--muted);
+}
