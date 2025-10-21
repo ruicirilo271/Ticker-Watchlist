@@ -1,138 +1,92 @@
-const track1 = () => document.querySelector(".ticker-track.first");
-const track2 = () => document.querySelector(".ticker-track.second");
+async function loadTopGainers() {
+  const res = await fetch("/api/quotes");
+  const data = await res.json();
+  const all = data.items || [];
 
-// === Utilidades ===
-function iconForCategory(c){
-  return { STOCK:"💼", INDEX:"💹", CRYPTO:"🪙", COMMODITY:"💰" }[c] || "";
-}
-function fmtPrice(v){
-  if (v === null || v === undefined) return "—";
-  const abs = Math.abs(v);
-  return (abs >= 1000 || abs < 1) ? v.toFixed(4) : v.toFixed(2);
-}
-function fmtDelta(chg, pct){
-  if (chg === null || pct === null) return {text:"—", cls:"flat"};
-  const arrow = chg > 0 ? "▲" : chg < 0 ? "▼" : "•";
-  const cls = chg > 0 ? "up" : chg < 0 ? "down" : "flat";
-  const sign1 = chg > 0 ? "+" : "";
-  const sign2 = pct > 0 ? "+" : "";
-  return {text:`${arrow} ${sign1}${chg.toFixed(2)} (${sign2}${pct.toFixed(2)}%)`, cls};
-}
-function getCurrency(ticker){
-  if (!ticker) return "USD";
-  if (ticker.endsWith(".LS")) return "EUR";
-  if (ticker.includes("-USD")) return "USD";
-  return "USD";
-}
+  // 🔹 Ordena por variação percentual
+  const top = all
+    .filter(i => i.change_pct > 0)
+    .sort((a, b) => b.change_pct - a.change_pct)
+    .slice(0, 3);
 
-// === Ticker superior ===
-function buildHTML(items){
-  return items.map(it=>{
-    const d = fmtDelta(it.change, it.change_pct);
-    return `
-      <div class="item">
-        <span class="cat cat-${it.category.toLowerCase()}">${iconForCategory(it.category)}</span>
-        <span class="sym">${it.ticker}</span>
-        <span class="price">${fmtPrice(it.price)}</span>
-        <span class="delta ${d.cls}">${d.text}</span>
-      </div>`;
-  }).join("");
-}
-function adjustSpeed(){
-  const width = track1().scrollWidth;
-  const seconds = Math.max(10, Math.min(45, Math.round(width / 55)));
-  document.documentElement.style.setProperty("--speed", `${seconds}s`);
-}
+  const container = document.getElementById("top-gainers");
+  container.innerHTML = "";
 
-// === Top 3 Gainers com gráficos ===
-async function showTopGainers(items){
-  const valid = items.filter(i => typeof i.change_pct === "number" && i.change_pct > 0);
-  const top3 = [...valid].sort((a,b) => b.change_pct - a.change_pct).slice(0,3);
-  const grid = document.getElementById("gainers-grid");
-  grid.innerHTML = "";
-
-  // Cria containers de gráficos
-  top3.forEach(it=>{
-    const id = it.ticker.replace(/[^a-zA-Z0-9]/g,"");
-    const moeda = getCurrency(it.ticker);
+  for (const t of top) {
     const card = document.createElement("div");
-    card.className = "gainer-card";
-    card.innerHTML = `
-      <div class="g-head">
-        <h3>${it.ticker}</h3>
-        <small>${it.name || ""} • ${moeda}</small>
-      </div>
-      <div class="g-meta">
-        <span class="g-pct">+${it.change_pct.toFixed(2)}%</span>
-        <span>${fmtPrice(it.price)} ${moeda}</span>
-      </div>
-      <canvas id="chart-${id}" width="340" height="180"></canvas>
-    `;
-    grid.appendChild(card);
-  });
+    card.className = "chart-card";
 
-  // Carrega e desenha cada gráfico separadamente
-  for (const it of top3) {
-    const id = it.ticker.replace(/[^a-zA-Z0-9]/g,"");
-    const canvas = document.getElementById(`chart-${id}`);
-    if (!canvas) continue;
+    const header = document.createElement("h2");
+    header.innerHTML = `${t.name} (${t.ticker}) <span class="chg">+${t.change_pct.toFixed(2)}%</span>`;
+    card.appendChild(header);
 
+    const price = document.createElement("div");
+    price.className = "price";
+    price.innerHTML = `${t.price} <small class="currency">${t.currency || ""}</small>`;
+    card.appendChild(price);
+
+    const canvas = document.createElement("canvas");
+    card.appendChild(canvas);
+    container.appendChild(card);
+
+    // 🔹 Carrega gráfico intraday
     try {
-      const res = await fetch(`/api/intraday/${encodeURIComponent(it.ticker)}`, {cache:"no-store"});
-      const data = await res.json();
-      if (!data.ok || !data.prices || data.prices.length < 2) continue;
+      const intradayRes = await fetch(`/api/intraday/${t.ticker}`);
+      const intradayData = await intradayRes.json();
+      if (!intradayData.ok) continue;
 
-      // Cada gráfico num contexto isolado
-      const ctx = canvas.getContext("2d");
-      new Chart(ctx, {
+      new Chart(canvas, {
         type: "line",
         data: {
-          labels: data.labels,
+          labels: intradayData.labels,
           datasets: [{
-            data: data.prices,
-            borderColor: "#00c853",
-            backgroundColor: "rgba(0,200,83,0.15)",
-            borderWidth: 2,
+            data: intradayData.prices,
+            borderColor: "#00e676",
+            backgroundColor: "rgba(0,230,118,0.15)",
             fill: true,
-            tension: 0.25,
-            pointRadius: 0
+            tension: 0.3,
+            borderWidth: 2
           }]
         },
         options: {
-          responsive: false,
-          maintainAspectRatio: false,
-          scales: { x: {display:false}, y:{display:false} },
-          plugins: { legend:{display:false}, tooltip:{enabled:false} }
+          scales: { x: { display: false }, y: { display: false } },
+          plugins: { legend: { display: false } },
+          elements: { point: { radius: 0 } },
         }
       });
-    } catch (e) {
-      console.warn("Erro ao desenhar gráfico", it.ticker, e);
+    } catch (err) {
+      console.error("Erro ao gerar gráfico:", err);
     }
   }
 }
 
-// === Carregar dados ===
-async function loadQuotes(){
-  try {
-    const res = await fetch("/api/quotes", {cache:"no-store"});
-    const data = await res.json();
-    const items = data.items || [];
+async function loadTicker() {
+  const res = await fetch("/api/quotes");
+  const data = await res.json();
+  const items = data.items || [];
 
-    // Atualiza ticker
-    const html = buildHTML(items);
-    track1().innerHTML = html;
-    track2().innerHTML = html;
-    setTimeout(adjustSpeed, 300);
+  const track1 = document.querySelector(".ticker-track.first");
+  const track2 = document.querySelector(".ticker-track.second");
 
-    // Atualiza Top 3 Gainers
-    await showTopGainers(items);
-  } catch (err) {
-    console.error("Erro a carregar cotações:", err);
-  }
+  const html = items.map(it => `
+    <div class="item">
+      <span class="sym">${it.ticker}</span>
+      <span class="name">${it.name}</span>
+      <span class="price">${it.price} <small class="currency">${it.currency || ""}</small></span>
+      <span class="delta ${it.change > 0 ? "up" : it.change < 0 ? "down" : "flat"}">
+        ${(it.change > 0 ? "▲" : it.change < 0 ? "▼" : "•")} ${it.change_pct.toFixed(2)}%
+      </span>
+    </div>
+  `).join("");
+
+  track1.innerHTML = html;
+  track2.innerHTML = html;
 }
 
-// === Inicialização ===
-window.addEventListener("load", ()=>{
-  loadQuotes();
-  setInterval(loadQuotes, 90_000);
+// Inicializa
+window.addEventListener("load", () => {
+  loadTicker();
+  loadTopGainers();
+  setInterval(loadTicker, 90_000);
+  setInterval(loadTopGainers, 180_000);
 });
