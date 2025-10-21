@@ -5,14 +5,23 @@
     "ABBV",
     "EGL.LS",
     "KZR",
-    "SMC"
+    "SMC",
+    "SLS",
+    "KYIVW",
+    "IMDX",
+    "MSGY",
+    "NOS.LS",
+    "DCGO"
   ],
   "crypto": [
     "bitcoin",
     "solana",
     "ethereum"
   ],
-  "commodities": [],
+  "commodities": [
+    "GC=F",
+    "ZC=F"
+  ],
   "indices": [
     "^PSI20",
     "^NDX"

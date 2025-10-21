@@ -3,11 +3,48 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ticker Watchlist — Bloomberg Style</title>
+  <title>Watchlist — Boomerang Trader</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* Extra para a grelha dos top gainers */
+    .top-gainers { text-align:center; margin-top:100px; }
+    .gainers-grid {
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:24px;
+      margin-top:30px;
+    }
+    .gainer-card {
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:14px;
+      padding:18px 20px;
+      width:320px;
+      box-shadow:0 8px 25px rgba(0,0,0,0.3);
+      text-align:center;
+    }
+    .g-head h3 {margin:0;font-size:22px;}
+    .g-head small {color:#9ca3af;}
+    .g-meta {
+      margin-top:8px;
+      font-weight:700;
+      display:flex;
+      justify-content:space-between;
+      color:#eee;
+    }
+    .g-pct {color:#00c853;}
+    .g-pct.down {color:#ff1744;}
+    canvas {
+      margin-top:10px;
+      display:block;
+      margin-left:auto;
+      margin-right:auto;
+    }
+  </style>
 </head>
 <body>
-  <!-- Barra fixa no topo (fullscreen horizontal) -->
+  <!-- Barra fixa de tickers -->
   <section class="ticker-wrap" title="Paira para pausar">
     <div class="ticker">
       <div class="ticker-track first"></div>
@@ -15,12 +52,18 @@
     </div>
   </section>
 
-  <!-- (Opcional) conteúdo por baixo do ticker -->
+  <!-- Conteúdo principal -->
   <main class="under-ticker">
-    <h1>Watchlist em tempo real</h1>
-    <p>Atualiza automaticamente a cada 10 segundos.</p>
+    <h1>Watchlist em Tempo Real</h1>
+    <p>Atualiza automaticamente a cada 90 segundos.</p>
+
+    <section class="top-gainers">
+      <h2>📈 Maiores Subidas do Dia</h2>
+      <div id="gainers-grid" class="gainers-grid"></div>
+    </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="/static/script.js"></script>
 </body>
 </html>
